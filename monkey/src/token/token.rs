@@ -1,25 +1,57 @@
 pub type TokenType = &'static str;
 
 #[derive(Debug, PartialEq)]
-pub struct Token<'a> {
+pub struct Token {
     pub ttype:      TokenType,
-    pub literal:    &'a str,
+    pub literal:    String,
 }
 
-pub static ILLEGAL: &'static str        = "ILLEGAL";
-pub static EOF: &'static str            = "EOF";
+impl Token {
+    pub fn new(ttype: TokenType, literal: String) -> Token {
+        return Token{ ttype: ttype, literal: literal };
+    }
+}
 
-pub static IDENT: &'static str          = "IDENT";
-pub static INT: &'static str            = "INT";
+// Metacharacters
+pub static ILLEGAL:     TokenType       = "ILLEGAL";    // unrecognized character
+pub static EOF:         TokenType       = "EOF";        // end-of-file
 
-pub static ASSIGN: &'static str         = "=";
-pub static PLUS: &'static str           = "+";
+// Identifiers + Literals
+pub static IDENT:       TokenType       = "IDENT";      // add, foobar, x, y, ...
+pub static INT:         TokenType       = "INT";        // 1343456
+pub static LET:         TokenType       = "let";
+pub static FUNCTION:    TokenType       = "fn";
 
-pub static COMMA: &'static str          = ",";
-pub static SEMICOLON: &'static str      = ";";
+// Operators
+pub static ASSIGN:      TokenType       = "=";
+pub static PLUS:        TokenType       = "+";
 
-pub static LPAREN: &'static str         = "(";
-pub static RPAREN: &'static str         = ")";
-pub static LBRACE: &'static str         = "{";
-pub static RBRACE: &'static str         = "}";
+// Delimiters
+pub static COMMA:       TokenType       = ",";
+pub static SEMICOLON:   TokenType       = ";";
+
+// Collections + Scopes
+pub static LPAREN:      TokenType       = "(";
+pub static RPAREN:      TokenType       = ")";
+pub static LBRACE:      TokenType       = "{";
+pub static RBRACE:      TokenType       = "}";
+
+pub fn lookup_ident(ident: &String) -> TokenType {
+    match ident.as_str() {
+        "fn"        => FUNCTION,
+        "let"       => LET,
+        _           => IDENT,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lookup_ident() {
+        assert_eq!(lookup_ident(&String::from("fn")), FUNCTION);
+        assert_eq!(lookup_ident(&String::from("let")), LET);
+    }
+}
 
