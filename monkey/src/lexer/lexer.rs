@@ -1,35 +1,51 @@
 use std::str::Chars;
+use std::iter::Peekable;
 use token::*;
 
 pub struct Lexer<'a> {
     pub input:          &'a str,
-    pub chars:          Chars<'a>,
+    pub chars:          Peekable<Chars<'a>>,
     pub position:       i32,            // current position in input (points to current char)
     pub read_position:  i32,            // current reading position in input (after current char)
     pub ch:             Option<char>,   // current char under examination
 }
 
-pub fn new<'a>(input: &'a str) -> Lexer<'a> {
-    let mut l = Lexer{
-        input:          input,
-        chars:          input.chars(),
-        position:       0,
-        read_position:  0,
-        ch:             None,
-    };
-    l.read_char();
-    return l;
-}
-
 impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Lexer<'a> {
+        let mut l = Lexer{
+            input:          input,
+            chars:          input.chars().peekable(),
+            position:       0,
+            read_position:  0,
+            ch:             None,
+        };
+        l.read_char();
+        return l;
+    }
+
     pub fn read_char(&mut self) {
-        if self.read_position >= self.input.len() as i32 {
+        if self.read_position > self.input.len() as i32 {
             self.ch = None;
+        } else if self.read_position == self.input.len() as i32 {
+            self.ch = Some('\0');
         } else {
             self.ch = self.chars.next();
         }
         self.position = self.read_position;
         self.read_position += 1;
+    }
+
+    pub fn peek_char(&mut self) -> Option<char> {
+        if self.read_position > self.input.len() as i32 {
+            return None;
+        } else if self.read_position == self.input.len() as i32 {
+            return Some('\0');
+        } else {
+            match self.chars.peek() {
+                Some(&ch) => return Some(ch),
+                None => return None,
+            }
+        }
     }
 
     pub fn next_token(&mut self) -> Option<token::Token> {
@@ -38,14 +54,15 @@ impl<'a> Lexer<'a> {
         self.skip_whitespace();
 
         match self.ch {
-            Some('=') => tok = Some(token::Token::new(token::ASSIGN,        '='.to_string())),
-            Some('+') => tok = Some(token::Token::new(token::PLUS,          '+'.to_string())),
-            Some(',') => tok = Some(token::Token::new(token::COMMA,         ','.to_string())),
-            Some(';') => tok = Some(token::Token::new(token::SEMICOLON,     ';'.to_string())),
-            Some('(') => tok = Some(token::Token::new(token::LPAREN,        '('.to_string())),
-            Some(')') => tok = Some(token::Token::new(token::RPAREN,        ')'.to_string())),
-            Some('{') => tok = Some(token::Token::new(token::LBRACE,        '{'.to_string())),
-            Some('}') => tok = Some(token::Token::new(token::RBRACE,        '}'.to_string())),
+            Some('=') =>    tok = Some(token::Token::new(token::ASSIGN,         '='.to_string())),
+            Some('+') =>    tok = Some(token::Token::new(token::PLUS,           '+'.to_string())),
+            Some(',') =>    tok = Some(token::Token::new(token::COMMA,          ','.to_string())),
+            Some(';') =>    tok = Some(token::Token::new(token::SEMICOLON,      ';'.to_string())),
+            Some('(') =>    tok = Some(token::Token::new(token::LPAREN,         '('.to_string())),
+            Some(')') =>    tok = Some(token::Token::new(token::RPAREN,         ')'.to_string())),
+            Some('{') =>    tok = Some(token::Token::new(token::LBRACE,         '{'.to_string())),
+            Some('}') =>    tok = Some(token::Token::new(token::RBRACE,         '}'.to_string())),
+            Some('\0') =>   tok = Some(token::Token::new(token::EOF,            '\0'.to_string())),
             Some(_) => {
                 if is_letter(self.ch) {
                     let ident: String = self.read_identifier();
@@ -141,45 +158,46 @@ let result = add(five, ten);
 ";
 
         let tests = [
-            token::Token{ ttype:    token::LET,         literal:   String::from("let")         },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("five")        },
-            token::Token{ ttype:    token::ASSIGN,      literal:   String::from("=")           },
-            token::Token{ ttype:    token::INT,         literal:   String::from("5")           },
-            token::Token{ ttype:    token::SEMICOLON,   literal:   String::from(";")           },
-            token::Token{ ttype:    token::LET,         literal:   String::from("let")         },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("ten")         },
-            token::Token{ ttype:    token::ASSIGN,      literal:   String::from("=")           },
-            token::Token{ ttype:    token::INT,         literal:   String::from("10")          },
-            token::Token{ ttype:    token::SEMICOLON,   literal:   String::from(";")           },
-            token::Token{ ttype:    token::LET,         literal:   String::from("let")         },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("add")         },
-            token::Token{ ttype:    token::ASSIGN,      literal:   String::from("=")           },
-            token::Token{ ttype:    token::FUNCTION,    literal:   String::from("fn")          },
-            token::Token{ ttype:    token::LPAREN,      literal:   String::from("(")           },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("x")           },
-            token::Token{ ttype:    token::COMMA,       literal:   String::from(",")           },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("y")           },
-            token::Token{ ttype:    token::RPAREN,      literal:   String::from(")")           },
-            token::Token{ ttype:    token::LBRACE,      literal:   String::from("{")           },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("x")           },
-            token::Token{ ttype:    token::PLUS,        literal:   String::from("+")           },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("y")           },
-            token::Token{ ttype:    token::SEMICOLON,   literal:   String::from(";")           },
-            token::Token{ ttype:    token::RBRACE,      literal:   String::from("}")           },
-            token::Token{ ttype:    token::SEMICOLON,   literal:   String::from(";")           },
-            token::Token{ ttype:    token::LET,         literal:   String::from("let")         },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("result")      },
-            token::Token{ ttype:    token::ASSIGN,      literal:   String::from("=")           },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("add")         },
-            token::Token{ ttype:    token::LPAREN,      literal:   String::from("(")           },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("five")        },
-            token::Token{ ttype:    token::COMMA,       literal:   String::from(",")           },
-            token::Token{ ttype:    token::IDENT,       literal:   String::from("ten")         },
-            token::Token{ ttype:    token::RPAREN,      literal:   String::from(")")           },
-            token::Token{ ttype:    token::SEMICOLON,   literal:   String::from(";")           },
+            token::Token{ ttype:    token::LET,         literal:    String::from("let")         },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("five")        },
+            token::Token{ ttype:    token::ASSIGN,      literal:    String::from("=")           },
+            token::Token{ ttype:    token::INT,         literal:    String::from("5")           },
+            token::Token{ ttype:    token::SEMICOLON,   literal:    String::from(";")           },
+            token::Token{ ttype:    token::LET,         literal:    String::from("let")         },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("ten")         },
+            token::Token{ ttype:    token::ASSIGN,      literal:    String::from("=")           },
+            token::Token{ ttype:    token::INT,         literal:    String::from("10")          },
+            token::Token{ ttype:    token::SEMICOLON,   literal:    String::from(";")           },
+            token::Token{ ttype:    token::LET,         literal:    String::from("let")         },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("add")         },
+            token::Token{ ttype:    token::ASSIGN,      literal:    String::from("=")           },
+            token::Token{ ttype:    token::FUNCTION,    literal:    String::from("fn")          },
+            token::Token{ ttype:    token::LPAREN,      literal:    String::from("(")           },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("x")           },
+            token::Token{ ttype:    token::COMMA,       literal:    String::from(",")           },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("y")           },
+            token::Token{ ttype:    token::RPAREN,      literal:    String::from(")")           },
+            token::Token{ ttype:    token::LBRACE,      literal:    String::from("{")           },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("x")           },
+            token::Token{ ttype:    token::PLUS,        literal:    String::from("+")           },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("y")           },
+            token::Token{ ttype:    token::SEMICOLON,   literal:    String::from(";")           },
+            token::Token{ ttype:    token::RBRACE,      literal:    String::from("}")           },
+            token::Token{ ttype:    token::SEMICOLON,   literal:    String::from(";")           },
+            token::Token{ ttype:    token::LET,         literal:    String::from("let")         },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("result")      },
+            token::Token{ ttype:    token::ASSIGN,      literal:    String::from("=")           },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("add")         },
+            token::Token{ ttype:    token::LPAREN,      literal:    String::from("(")           },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("five")        },
+            token::Token{ ttype:    token::COMMA,       literal:    String::from(",")           },
+            token::Token{ ttype:    token::IDENT,       literal:    String::from("ten")         },
+            token::Token{ ttype:    token::RPAREN,      literal:    String::from(")")           },
+            token::Token{ ttype:    token::SEMICOLON,   literal:    String::from(";")           },
+            token::Token{ ttype:    token::EOF,         literal:    String::from("\0")          },
         ];
 
-        let mut l = new(&input);
+        let mut l = Lexer::new(&input);
 
         let mut i = 0;
         for test in tests.iter() {
