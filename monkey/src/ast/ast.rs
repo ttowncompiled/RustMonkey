@@ -153,9 +153,6 @@ impl Node for ExpressionStatement {
     fn to_string(&self) -> String {
         let mut builder: String = String::new();
 
-        builder.push_str(&self.token_literal());
-        builder.push(' ');
-
         match self.expression.as_ref().clone() {
             Some(exp) => builder.push_str(&(*exp).to_string()),
             None => (),
@@ -227,6 +224,46 @@ impl Expression for IntegerLiteral {
     fn expression_node(&self) {}
 }
 
+pub struct PrefixExpression {
+    pub token:          token::Token,       // The prefix, e.g. !
+    pub operator:       String,
+    pub expression:     Option<Box<dyn Expression>>,
+}
+
+impl PrefixExpression {
+    pub fn new(tok: token::Token, op: String, exp: Option<Box<dyn Expression>>) -> PrefixExpression {
+        return PrefixExpression{
+            token:          tok,
+            operator:       op,
+            expression:     exp,
+        };
+    }
+}
+
+impl Node for PrefixExpression {
+    fn token_literal(&self) -> String {
+        return self.token.literal.clone();
+    }
+
+    fn to_string(&self) -> String {
+        let mut builder: String = String::new();
+
+        builder.push('(');
+        builder.push_str(&self.operator);
+        match self.expression.as_ref().clone() {
+            Some(exp) => builder.push_str(&(**exp).to_string()),
+            None => (),
+        }
+        builder.push(')');
+
+        return builder;
+    }
+}
+
+impl Expression for PrefixExpression {
+    fn expression_node(&self) {}
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,22 +285,28 @@ mod tests {
             token::Token::new(token::PLUS, String::from(token::PLUS)),
             Some(Box::new(Identifier::new(token::Token::new(token::IDENT, String::from("myVar")), String::from("myVar"))))
         );
-        assert_eq!(es.to_string(), "+ myVar;");
+        assert_eq!(es.to_string(), "myVar;");
         let id = Identifier::new(
             token::Token::new(token::IDENT, String::from("myVar")),
             String::from("myVar")
         );
         assert_eq!(id.to_string(), "myVar");
-        let ilit = IntegerLiteral::new(
+        let il = IntegerLiteral::new(
             token::Token::new(token::INT, String::from("5")),
             5
         );
-        assert_eq!(ilit.to_string(), "5");
+        assert_eq!(il.to_string(), "5");
+        let pe = PrefixExpression::new(
+            token::Token::new(token::INT, String::from("5")),
+            String::from("+"),
+            Some(Box::new(IntegerLiteral::new(token::Token::new(token::INT, String::from("5")), 5)))
+        );
+        assert_eq!(pe.to_string(), "(+5)");
         let mut program = Program::new();
         program.statements.push(Box::new(ls));
         program.statements.push(Box::new(rs));
         program.statements.push(Box::new(es));
-        assert_eq!(program.to_string(), "let myVar = anotherVar;\nreturn myVar;\n+ myVar;\n");
+        assert_eq!(program.to_string(), "let myVar = anotherVar;\nreturn myVar;\nmyVar;\n");
     }
 }
 

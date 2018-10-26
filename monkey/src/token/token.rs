@@ -26,6 +26,8 @@ pub static RETURN:      TokenType       = "return";
 // Operators
 pub static ASSIGN:      TokenType       = "=";
 pub static PLUS:        TokenType       = "+";
+pub static BANG:        TokenType       = "!";
+pub static MINUS:       TokenType       = "-";
 
 // Delimiters
 pub static COMMA:       TokenType       = ",";

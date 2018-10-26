@@ -40,7 +40,12 @@ impl<'a> Parser<'a> {
         return match ttype {
             "IDENT" => self.parse_identifier(),
             "INT" => self.parse_integer_literal(),
-            _ => None,
+            "!" => self.parse_prefix_expression(),
+            "-" => self.parse_prefix_expression(),
+            _ => {
+                self.no_prefix_parse_fn_error();
+                None
+            },
         };
     }
 
@@ -64,10 +69,31 @@ impl<'a> Parser<'a> {
         };
     }
 
+    pub fn parse_prefix_expression(&mut self) -> Option<Box<ast::Expression>> {
+        let token: token::Token;
+        match self.cur_token.as_ref().cloned() {
+            Some(tok) => token = tok,
+            None => return None,
+        }
+
+        self.next_token();
+
+        let right: Option<Box<ast::Expression>> = self.parse_expression(Precedence::PREFIX as i32);
+
+        return Some(Box::new(ast::PrefixExpression::new(token.clone(), token.literal.clone(), right)));
+    }
+
     pub fn peek_error(&mut self, ttype: token::TokenType) {
         match self.peek_token.as_ref().cloned() {
             Some(tok) => self.errors.push(format!("expected next token to be {}, got {} instead", ttype, tok.ttype)),
             None => self.errors.push(format!("expected next token to be {}, got None instead", ttype)),
+        }
+    }
+
+    pub fn no_prefix_parse_fn_error(&mut self) {
+        match self.cur_token.as_ref().cloned() {
+            Some(tok) => self.errors.push(format!("no prefix parse function for {} found", tok.ttype)),
+            None => self.errors.push(format!("no prefix parse function for None found")),
         }
     }
 
@@ -296,11 +322,7 @@ return 838383;
                 if prog.statements.len() != 1 {
                     assert!(false, "program.statements does not contain {} statements, got={}", 1, prog.statements.len());
                 }
-                let mut i = 0;
-                for stmt in prog.statements.iter() {
-                    assert_eq!((**stmt).token_literal(), "foobar", "tests[{}]", i);
-                    i += 1;
-                }
+                assert_eq!((*prog.statements[0]).token_literal(), "foobar", "tests[{}]", 0);
             },
             None => assert!(false, "parse_program() returns None"),
         }
@@ -321,11 +343,31 @@ return 838383;
                 if prog.statements.len() != 1 {
                     assert!(false, "program.statements does not contain {} statements, got={}", 1, prog.statements.len());
                 }
-                let mut i = 0;
-                for stmt in prog.statements.iter() {
-                    assert_eq!((**stmt).token_literal(), "5", "tests[{}]", i);
-                    i += 1;
+                assert_eq!((*prog.statements[0]).token_literal(), "5", "tests[{}]", 0);
+            },
+            None => assert!(false, "parse_program() returns None"),
+        }
+    }
+
+    #[test]
+    fn test_parsing_prefix_expressions() {
+        let input = "
+!5;
+-5";
+
+        let mut l = lexer::Lexer::new(input);
+        let mut p = Parser::new(&mut l);
+
+        let program = p.parse_program();
+        check_parser_errors(&p);
+
+        match program {
+            Some(prog) => {
+                if prog.statements.len() != 2 {
+                    assert!(false, "program.statements does not contain {} statements, got={}", 2, prog.statements.len());
                 }
+                assert_eq!((*prog.statements[0]).to_string(), "(!5);", "tests[{}]", 0);
+                assert_eq!((*prog.statements[1]).to_string(), "(-5);", "tests[{}]", 1);
             },
             None => assert!(false, "parse_program() returns None"),
         }

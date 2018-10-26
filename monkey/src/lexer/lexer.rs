@@ -56,6 +56,8 @@ impl<'a> Lexer<'a> {
         match self.ch {
             Some('=') =>    tok = Some(token::Token::new(token::ASSIGN,         '='.to_string())),
             Some('+') =>    tok = Some(token::Token::new(token::PLUS,           '+'.to_string())),
+            Some('!') =>    tok = Some(token::Token::new(token::BANG,           '!'.to_string())),
+            Some('-') =>    tok = Some(token::Token::new(token::MINUS,          '-'.to_string())),
             Some(',') =>    tok = Some(token::Token::new(token::COMMA,          ','.to_string())),
             Some(';') =>    tok = Some(token::Token::new(token::SEMICOLON,      ';'.to_string())),
             Some('(') =>    tok = Some(token::Token::new(token::LPAREN,         '('.to_string())),
