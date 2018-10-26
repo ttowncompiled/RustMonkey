@@ -44,7 +44,7 @@ pub struct LetStatement {
 impl LetStatement {
     pub fn new(tok: token::Token, name: Identifier, value: Box<dyn Expression>) -> LetStatement {
         return LetStatement{
-            token:      tok,        // the token.LET token
+            token:      tok,
             name:       name,
             value:      value,
         };
@@ -58,6 +58,30 @@ impl Node for LetStatement {
 }
 
 impl Statement for LetStatement {
+    fn statement_node(&self) {}
+}
+
+pub struct ReturnStatement {
+    pub token:          token::Token,   // the token.RETURN token
+    pub return_value:   Box<dyn Expression>,
+}
+
+impl ReturnStatement {
+    pub fn new(tok: token::Token, value: Box<dyn Expression>) -> ReturnStatement {
+        return ReturnStatement{
+            token:          tok,
+            return_value:   value,
+        };
+    }
+}
+
+impl Node for ReturnStatement {
+    fn token_literal(&self) -> String {
+        return self.token.literal.clone();
+    }
+}
+
+impl Statement for ReturnStatement {
     fn statement_node(&self) {}
 }
 

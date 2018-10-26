@@ -70,6 +70,11 @@ impl<'a> Parser<'a> {
                         Some(statement) => Some(Box::new(statement)),
                         None => None,
                     }
+                } else if tok.ttype == token::RETURN {
+                    return match self.parse_return_statement() {
+                        Some(statement) => Some(Box::new(statement)),
+                        None => None,
+                    }
                 } else {
                     return None;
                 }
@@ -105,6 +110,31 @@ impl<'a> Parser<'a> {
                 Some(tok) => {
                     if tok.ttype == token::SEMICOLON {
                         return Some(ast::LetStatement::new(token, name, Box::new(ast::Identifier::new(tok.clone(), tok.literal.clone()))));
+                    }
+                },
+                None => (),
+            }
+            self.next_token();
+        }
+
+        return None;
+    }
+
+    pub fn parse_return_statement(&mut self) -> Option<ast::ReturnStatement> {
+        let token: token::Token;
+        match self.cur_token.as_ref().cloned() {
+            Some(tok) => token = tok,
+            None => return None,
+        }
+
+        self.next_token();
+
+        // TODO: return ReturnStatement with expression
+        while self.cur_token.is_some() {
+            match self.cur_token.as_ref().cloned() {
+                Some(tok) => {
+                    if tok.ttype == token::SEMICOLON {
+                        return Some(ast::ReturnStatement::new(token, Box::new(ast::Identifier::new(tok.clone(), tok.literal.clone()))));
                     }
                 },
                 None => (),
@@ -159,6 +189,35 @@ let foobar = 838383;
                 let mut i = 0;
                 for stmt in prog.statements.iter() {
                     assert_eq!((**stmt).token_literal(), token::LET, "tests[{}]", i);
+                    i += 1;
+                }
+            },
+            None => assert!(false, "parse_program() returns None"),
+        }
+    }
+
+    #[test]
+    fn test_return_statement() {
+        let input = "
+return 5;
+return 10;
+return 838383;
+";
+
+        let mut l = lexer::Lexer::new(input);
+        let mut p = Parser::new(&mut l);
+
+        let program = p.parse_program();
+        check_parser_errors(&p);
+
+        match program {
+            Some(prog) => {
+                if prog.statements.len() != 3 {
+                    assert!(false, "program.statements does not contain {} statements, got={}", 3, prog.statements.len());
+                }
+                let mut i = 0;
+                for stmt in prog.statements.iter() {
+                    assert_eq!((**stmt).token_literal(), token::RETURN, "tests[{}]", i);
                     i += 1;
                 }
             },

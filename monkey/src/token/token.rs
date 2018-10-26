@@ -21,6 +21,7 @@ pub static IDENT:       TokenType       = "IDENT";      // add, foobar, x, y, ..
 pub static INT:         TokenType       = "INT";        // 1343456
 pub static LET:         TokenType       = "let";
 pub static FUNCTION:    TokenType       = "fn";
+pub static RETURN:      TokenType       = "return";
 
 // Operators
 pub static ASSIGN:      TokenType       = "=";
@@ -40,6 +41,7 @@ pub fn lookup_ident(ident: &String) -> TokenType {
     match ident.as_str() {
         "fn"        => FUNCTION,
         "let"       => LET,
+        "return"    => RETURN,
         _           => IDENT,
     }
 }
@@ -50,8 +52,9 @@ mod tests {
 
     #[test]
     fn test_lookup_ident() {
-        assert_eq!(lookup_ident(&String::from("fn")), FUNCTION);
-        assert_eq!(lookup_ident(&String::from("let")), LET);
+        assert_eq!(lookup_ident(&String::from("fn")),       FUNCTION);
+        assert_eq!(lookup_ident(&String::from("let")),      LET);
+        assert_eq!(lookup_ident(&String::from("return")),   RETURN);
     }
 }
 
