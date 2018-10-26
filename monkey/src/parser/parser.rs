@@ -151,8 +151,18 @@ let foobar = 838383;
         let program = p.parse_program();
         check_parser_errors(&p);
 
-        if program.is_none() {
-            assert!(false, "parse_program() returns None");
+        match program {
+            Some(prog) => {
+                if prog.statements.len() != 3 {
+                    assert!(false, "program.statements does not contain {} statements, got={}", 3, prog.statements.len());
+                }
+                let mut i = 0;
+                for stmt in prog.statements.iter() {
+                    assert_eq!((**stmt).token_literal(), token::LET, "tests[{}]", i);
+                    i += 1;
+                }
+            },
+            None => assert!(false, "parse_program() returns None"),
         }
     }
 
@@ -166,7 +176,7 @@ let foobar = 838383;
             output.push_str(&format!("\nparser error: {}", err));
         }
         output.push_str("\n\n");
-        panic!(output);
+        assert!(false, output);
     }
 }
 
