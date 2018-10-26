@@ -2,6 +2,17 @@ use ast::*;
 use lexer::*;
 use token::*;
 
+#[derive(PartialEq)]
+enum Precedence {
+    LOWEST,
+    EQUALS,         // ==
+    LESSGREATER,    // > or <
+    SUM,            // +
+    PRODUCT,        // *
+    PREFIX,         // -X or !X
+    CALL,           // myFunction(X)
+}
+
 pub struct Parser<'a> {
     pub l:              &'a mut lexer::Lexer<'a>,
     pub errors:         Vec<String>,
@@ -23,6 +34,20 @@ impl<'a> Parser<'a> {
         p.next_token();
 
         return p;
+    }
+
+    pub fn prefix_parse_fns(&self, ttype: token::TokenType) -> Option<Box<ast::Expression>> {
+        return match ttype {
+            "IDENT" => self.parse_identifier(),
+            _ => None,
+        };
+    }
+
+    pub fn parse_identifier(&self) -> Option<Box<ast::Expression>> {
+        return match self.cur_token.as_ref().cloned() {
+            Some(tok) => Some(Box::new(ast::Identifier::new(tok.clone(), tok.literal.clone()))),
+            None => None,
+        };
     }
 
     pub fn peek_error(&mut self, ttype: token::TokenType) {
@@ -66,24 +91,18 @@ impl<'a> Parser<'a> {
         match self.cur_token.as_ref().cloned() {
             Some(tok) => {
                 if tok.ttype == token::LET {
-                    return match self.parse_let_statement() {
-                        Some(statement) => Some(Box::new(statement)),
-                        None => None,
-                    }
+                    return self.parse_let_statement();
                 } else if tok.ttype == token::RETURN {
-                    return match self.parse_return_statement() {
-                        Some(statement) => Some(Box::new(statement)),
-                        None => None,
-                    }
+                    return self.parse_return_statement();
                 } else {
-                    return None;
+                    return self.parse_expression_statement();
                 }
             },
             None => return None,
         }
     }
 
-    pub fn parse_let_statement(&mut self) -> Option<ast::LetStatement> {
+    pub fn parse_let_statement(&mut self) -> Option<Box<ast::Statement>> {
         let token: token::Token;
         match self.cur_token.as_ref().cloned(){
             Some(tok) => token = tok,
@@ -109,7 +128,7 @@ impl<'a> Parser<'a> {
             match self.cur_token.as_ref().cloned() {
                 Some(tok) => {
                     if tok.ttype == token::SEMICOLON {
-                        return Some(ast::LetStatement::new(token, name, None));
+                        return Some(Box::new(ast::LetStatement::new(token, name, None)));
                     }
                 },
                 None => (),
@@ -120,7 +139,7 @@ impl<'a> Parser<'a> {
         return None;
     }
 
-    pub fn parse_return_statement(&mut self) -> Option<ast::ReturnStatement> {
+    pub fn parse_return_statement(&mut self) -> Option<Box<ast::Statement>> {
         let token: token::Token;
         match self.cur_token.as_ref().cloned() {
             Some(tok) => token = tok,
@@ -134,7 +153,7 @@ impl<'a> Parser<'a> {
             match self.cur_token.as_ref().cloned() {
                 Some(tok) => {
                     if tok.ttype == token::SEMICOLON {
-                        return Some(ast::ReturnStatement::new(token, None));
+                        return Some(Box::new(ast::ReturnStatement::new(token, None)));
                     }
                 },
                 None => (),
@@ -143,6 +162,29 @@ impl<'a> Parser<'a> {
         }
 
         return None;
+    }
+
+    pub fn parse_expression_statement(&mut self) -> Option<Box<ast::Statement>> {
+        let token: token::Token;
+        match self.cur_token.as_ref().cloned() {
+            Some(tok) => token = tok,
+            None => return None,
+        }
+
+        let expression: Option<Box<ast::Expression>> = self.parse_expression(Precedence::LOWEST as i32);
+
+        if self.peek_token_is(token::SEMICOLON) {
+            self.next_token();
+        }
+
+        return Some(Box::new(ast::ExpressionStatement::new(token, expression)));
+    }
+
+    pub fn parse_expression(&mut self, precedence: i32) -> Option<Box<ast::Expression>> {
+        return match self.cur_token.as_ref().cloned() {
+            Some(tok) => self.prefix_parse_fns(tok.ttype),
+            None => None,
+        };
     }
 
     pub fn expect_peek(&mut self, ttype: token::TokenType) -> bool {
@@ -218,6 +260,31 @@ return 838383;
                 let mut i = 0;
                 for stmt in prog.statements.iter() {
                     assert_eq!((**stmt).token_literal(), token::RETURN, "tests[{}]", i);
+                    i += 1;
+                }
+            },
+            None => assert!(false, "parse_program() returns None"),
+        }
+    }
+
+    #[test]
+    fn test_identifier_expression() {
+        let input = "foobar;";
+
+        let mut l = lexer::Lexer::new(input);
+        let mut p = Parser::new(&mut l);
+
+        let program = p.parse_program();
+        check_parser_errors(&p);
+
+        match program {
+            Some(prog) => {
+                if prog.statements.len() != 1 {
+                    assert!(false, "program.statements does not contain {} statements, got={}", 1, prog.statements.len());
+                }
+                let mut i = 0;
+                for stmt in prog.statements.iter() {
+                    assert_eq!((**stmt).token_literal(), "foobar", "tests[{}]", i);
                     i += 1;
                 }
             },
