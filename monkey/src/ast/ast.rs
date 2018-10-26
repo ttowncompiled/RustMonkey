@@ -49,11 +49,11 @@ impl Node for Program {
 pub struct LetStatement {
     pub token:      token::Token,       // the token.LET token
     pub name:       Identifier,
-    pub value:      Box<dyn Expression>,
+    pub value:      Option<Box<dyn Expression>>,
 }
 
 impl LetStatement {
-    pub fn new(tok: token::Token, name: Identifier, value: Box<dyn Expression>) -> LetStatement {
+    pub fn new(tok: token::Token, name: Identifier, value: Option<Box<dyn Expression>>) -> LetStatement {
         return LetStatement{
             token:      tok,
             name:       name,
@@ -89,11 +89,11 @@ impl Statement for LetStatement {
 
 pub struct ReturnStatement {
     pub token:          token::Token,   // the token.RETURN token
-    pub return_value:   Box<dyn Expression>,
+    pub return_value:   Option<Box<dyn Expression>>,
 }
 
 impl ReturnStatement {
-    pub fn new(tok: token::Token, ret_value: Box<dyn Expression>) -> ReturnStatement {
+    pub fn new(tok: token::Token, ret_value: Option<Box<dyn Expression>>) -> ReturnStatement {
         return ReturnStatement{
             token:          tok,
             return_value:   ret_value,
@@ -126,11 +126,11 @@ impl Statement for ReturnStatement {
 
 pub struct ExpressionStatement {
     pub token:          token::Token,   // the first token of the expression
-    pub expression:     Box<dyn Expression>,
+    pub expression:     Option<Box<dyn Expression>>,
 }
 
 impl ExpressionStatement {
-    pub fn new(tok: token::Token, exp: Box<dyn Expression>) -> ExpressionStatement {
+    pub fn new(tok: token::Token, exp: Option<Box<dyn Expression>>) -> ExpressionStatement {
         return ExpressionStatement{
             token:          tok,
             expression:     exp,

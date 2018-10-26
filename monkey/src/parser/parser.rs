@@ -109,7 +109,7 @@ impl<'a> Parser<'a> {
             match self.cur_token.as_ref().cloned() {
                 Some(tok) => {
                     if tok.ttype == token::SEMICOLON {
-                        return Some(ast::LetStatement::new(token, name, Box::new(ast::Identifier::new(tok.clone(), tok.literal.clone()))));
+                        return Some(ast::LetStatement::new(token, name, None));
                     }
                 },
                 None => (),
@@ -134,7 +134,7 @@ impl<'a> Parser<'a> {
             match self.cur_token.as_ref().cloned() {
                 Some(tok) => {
                     if tok.ttype == token::SEMICOLON {
-                        return Some(ast::ReturnStatement::new(token, Box::new(ast::Identifier::new(tok.clone(), tok.literal.clone()))));
+                        return Some(ast::ReturnStatement::new(token, None));
                     }
                 },
                 None => (),
