@@ -40,6 +40,7 @@ impl Node for Program {
 
         for stmt in self.statements.iter() {
             builder.push_str(&(**stmt).to_string());
+            builder.push('\n');
         }
 
         return builder;
@@ -73,9 +74,12 @@ impl Node for LetStatement {
         builder.push_str(&self.token_literal());
         builder.push(' ');
         builder.push_str(&self.name.to_string());
-        builder.push(' '); builder.push('=');
+        builder.push(' '); builder.push('='); builder.push(' ');
 
-        // TODO: build value
+        match self.value.as_ref().clone() {
+            Some(val) => builder.push_str(&(*val).to_string()),
+            None => (),
+        }
 
         builder.push(';');
 
@@ -112,7 +116,10 @@ impl Node for ReturnStatement {
         builder.push_str(&self.token_literal());
         builder.push(' ');
 
-        // TODO: build return_value
+        match self.return_value.as_ref().clone() {
+            Some(ret_val) => builder.push_str(&(*ret_val).to_string()),
+            None => (),
+        }
 
         builder.push(';');
 
@@ -149,7 +156,10 @@ impl Node for ExpressionStatement {
         builder.push_str(&self.token_literal());
         builder.push(' ');
 
-        // TODO: build expression
+        match self.expression.as_ref().clone() {
+            Some(exp) => builder.push_str(&(*exp).to_string()),
+            None => (),
+        }
 
         builder.push(';');
 
@@ -195,7 +205,32 @@ mod tests {
 
     #[test]
     fn test_to_string() {
-
+        let ls = LetStatement::new(
+            token::Token::new(token::LET, String::from(token::LET)),
+            Identifier::new(token::Token::new(token::IDENT, String::from("myVar")), String::from("myVar")),
+            Some(Box::new(Identifier::new(token::Token::new(token::IDENT, String::from("anotherVar")), String::from("anotherVar"))))
+        );
+        assert_eq!(ls.to_string(), "let myVar = anotherVar;");
+        let rs = ReturnStatement::new(
+            token::Token::new(token::RETURN, String::from(token::RETURN)),
+            Some(Box::new(Identifier::new(token::Token::new(token::IDENT, String::from("myVar")), String::from("myVar"))))
+        );
+        assert_eq!(rs.to_string(), "return myVar;");
+        let es = ExpressionStatement::new(
+            token::Token::new(token::PLUS, String::from(token::PLUS)),
+            Some(Box::new(Identifier::new(token::Token::new(token::IDENT, String::from("myVar")), String::from("myVar"))))
+        );
+        assert_eq!(es.to_string(), "+ myVar;");
+        let id = Identifier::new(
+            token::Token::new(token::IDENT, String::from("myVar")),
+            String::from("myVar")
+        );
+        assert_eq!(id.to_string(), "myVar");
+        let mut program = Program::new();
+        program.statements.push(Box::new(ls));
+        program.statements.push(Box::new(rs));
+        program.statements.push(Box::new(es));
+        assert_eq!(program.to_string(), "let myVar = anotherVar;\nreturn myVar;\n+ myVar;\n");
     }
 }
 
