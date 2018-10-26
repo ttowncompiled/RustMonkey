@@ -199,6 +199,34 @@ impl Expression for Identifier {
     fn expression_node(&self) {}
 }
 
+pub struct IntegerLiteral {
+    pub token:      token::Token,       // the token.INT token
+    pub value:      i64,
+}
+
+impl IntegerLiteral {
+    pub fn new(tok: token::Token, value: i64) -> IntegerLiteral {
+        return IntegerLiteral{
+            token:      tok,
+            value:      value,
+        };
+    }
+}
+
+impl Node for IntegerLiteral {
+    fn token_literal(&self) -> String {
+        return self.token.literal.clone();
+    }
+
+    fn to_string(&self) -> String {
+        return self.token_literal();
+    }
+}
+
+impl Expression for IntegerLiteral {
+    fn expression_node(&self) {}
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,6 +254,11 @@ mod tests {
             String::from("myVar")
         );
         assert_eq!(id.to_string(), "myVar");
+        let ilit = IntegerLiteral::new(
+            token::Token::new(token::INT, String::from("5")),
+            5
+        );
+        assert_eq!(ilit.to_string(), "5");
         let mut program = Program::new();
         program.statements.push(Box::new(ls));
         program.statements.push(Box::new(rs));

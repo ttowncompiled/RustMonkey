@@ -36,16 +36,30 @@ impl<'a> Parser<'a> {
         return p;
     }
 
-    pub fn prefix_parse_fns(&self, ttype: token::TokenType) -> Option<Box<ast::Expression>> {
+    pub fn prefix_parse_fns(&mut self, ttype: token::TokenType) -> Option<Box<ast::Expression>> {
         return match ttype {
             "IDENT" => self.parse_identifier(),
+            "INT" => self.parse_integer_literal(),
             _ => None,
         };
     }
 
-    pub fn parse_identifier(&self) -> Option<Box<ast::Expression>> {
+    pub fn parse_identifier(&mut self) -> Option<Box<ast::Expression>> {
         return match self.cur_token.as_ref().cloned() {
             Some(tok) => Some(Box::new(ast::Identifier::new(tok.clone(), tok.literal.clone()))),
+            None => None,
+        };
+    }
+
+    pub fn parse_integer_literal(&mut self) -> Option<Box<ast::Expression>> {
+        return match self.cur_token.as_ref().cloned() {
+            Some(tok) => match tok.literal.parse::<i64>() {
+                Ok(val) => Some(Box::new(ast::IntegerLiteral::new(tok, val))),
+                Err(err) => {
+                    self.errors.push(err.to_string());
+                    None
+                },
+            },
             None => None,
         };
     }
@@ -285,6 +299,31 @@ return 838383;
                 let mut i = 0;
                 for stmt in prog.statements.iter() {
                     assert_eq!((**stmt).token_literal(), "foobar", "tests[{}]", i);
+                    i += 1;
+                }
+            },
+            None => assert!(false, "parse_program() returns None"),
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_expression() {
+        let input = "5;";
+
+        let mut l = lexer::Lexer::new(input);
+        let mut p = Parser::new(&mut l);
+
+        let program = p.parse_program();
+        check_parser_errors(&p);
+
+        match program {
+            Some(prog) => {
+                if prog.statements.len() != 1 {
+                    assert!(false, "program.statements does not contain {} statements, got={}", 1, prog.statements.len());
+                }
+                let mut i = 0;
+                for stmt in prog.statements.iter() {
+                    assert_eq!((**stmt).token_literal(), "5", "tests[{}]", i);
                     i += 1;
                 }
             },
