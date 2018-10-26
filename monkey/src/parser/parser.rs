@@ -4,6 +4,7 @@ use token::*;
 
 pub struct Parser<'a> {
     pub l:              &'a mut lexer::Lexer<'a>,
+    pub errors:         Vec<String>,
     pub cur_token:      Option<token::Token>,
     pub peek_token:     Option<token::Token>,
 }
@@ -12,6 +13,7 @@ impl<'a> Parser<'a> {
     pub fn new(lexer: &'a mut lexer::Lexer<'a>) -> Parser<'a> {
         let mut p: Parser<'a> = Parser{
             l:              lexer,
+            errors:         Vec::new(),
             cur_token:      None,
             peek_token:     None,
         };
@@ -21,6 +23,13 @@ impl<'a> Parser<'a> {
         p.next_token();
 
         return p;
+    }
+
+    pub fn peek_error(&mut self, ttype: token::TokenType) {
+        match self.peek_token.as_ref().cloned() {
+            Some(tok) => self.errors.push(format!("expected next token to be {}, got {} instead", ttype, tok.ttype)),
+            None => self.errors.push(format!("expected next token to be {}, got None instead", ttype)),
+        }
     }
 
     pub fn next_token(&mut self) {
@@ -111,6 +120,7 @@ impl<'a> Parser<'a> {
             self.next_token();
             return true;
         } else {
+            self.peek_error(ttype);
             return false;
         }
     }
@@ -139,9 +149,24 @@ let foobar = 838383;
         let mut p = Parser::new(&mut l);
 
         let program = p.parse_program();
+        check_parser_errors(&p);
+
         if program.is_none() {
             assert!(false, "parse_program() returns None");
         }
+    }
+
+    fn check_parser_errors(p: &Parser) {
+        if p.errors.len() == 0 {
+            return;
+        }
+        let mut output: String = String::new();
+        output.push_str(&format!("\n\nparser has {} errors", p.errors.len()));
+        for err in p.errors.iter() {
+            output.push_str(&format!("\nparser error: {}", err));
+        }
+        output.push_str("\n\n");
+        panic!(output);
     }
 }
 
