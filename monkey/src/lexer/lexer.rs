@@ -54,10 +54,28 @@ impl<'a> Lexer<'a> {
         self.skip_whitespace();
 
         match self.ch {
-            Some('=') =>    tok = Some(token::Token::new(token::ASSIGN,         '='.to_string())),
+            Some('=') => match self.peek_char() {
+                Some('=') => {
+                    tok = Some(token::Token::new(token::EQ, String::from("==")));
+                    self.read_char();
+                },
+                Some(_) =>  tok = Some(token::Token::new(token::ASSIGN,         '='.to_string())),
+                None =>     tok = Some(token::Token::new(token::ASSIGN,         '='.to_string())),
+            },
             Some('+') =>    tok = Some(token::Token::new(token::PLUS,           '+'.to_string())),
-            Some('!') =>    tok = Some(token::Token::new(token::BANG,           '!'.to_string())),
+            Some('!') => match self.peek_char() {
+                Some('=') => {
+                    tok = Some(token::Token::new(token::NOT_EQ, String::from("!=")));
+                    self.read_char();
+                },
+                Some(_) =>  tok = Some(token::Token::new(token::BANG,           '!'.to_string())),
+                None =>     tok = Some(token::Token::new(token::BANG,           '!'.to_string())),
+            },
             Some('-') =>    tok = Some(token::Token::new(token::MINUS,          '-'.to_string())),
+            Some('<') =>    tok = Some(token::Token::new(token::LT,             '<'.to_string())),
+            Some('>') =>    tok = Some(token::Token::new(token::GT,             '>'.to_string())),
+            Some('/') =>    tok = Some(token::Token::new(token::SLASH,          '/'.to_string())),
+            Some('*') =>    tok = Some(token::Token::new(token::ASTERISK,       '*'.to_string())),
             Some(',') =>    tok = Some(token::Token::new(token::COMMA,          ','.to_string())),
             Some(';') =>    tok = Some(token::Token::new(token::SEMICOLON,      ';'.to_string())),
             Some('(') =>    tok = Some(token::Token::new(token::LPAREN,         '('.to_string())),

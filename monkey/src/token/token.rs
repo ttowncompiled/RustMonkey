@@ -28,6 +28,12 @@ pub static ASSIGN:      TokenType       = "=";
 pub static PLUS:        TokenType       = "+";
 pub static BANG:        TokenType       = "!";
 pub static MINUS:       TokenType       = "-";
+pub static EQ:          TokenType       = "==";
+pub static NOT_EQ:      TokenType       = "!=";
+pub static LT:          TokenType       = "<";
+pub static GT:          TokenType       = ">";
+pub static SLASH:       TokenType       = "/";
+pub static ASTERISK:    TokenType       = "*";
 
 // Delimiters
 pub static COMMA:       TokenType       = ",";

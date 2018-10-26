@@ -227,15 +227,15 @@ impl Expression for IntegerLiteral {
 pub struct PrefixExpression {
     pub token:          token::Token,       // The prefix, e.g. !
     pub operator:       String,
-    pub expression:     Option<Box<dyn Expression>>,
+    pub right:          Option<Box<dyn Expression>>,
 }
 
 impl PrefixExpression {
-    pub fn new(tok: token::Token, op: String, exp: Option<Box<dyn Expression>>) -> PrefixExpression {
+    pub fn new(tok: token::Token, op: String, right_exp: Option<Box<dyn Expression>>) -> PrefixExpression {
         return PrefixExpression{
             token:          tok,
             operator:       op,
-            expression:     exp,
+            right:          right_exp,
         };
     }
 }
@@ -250,7 +250,7 @@ impl Node for PrefixExpression {
 
         builder.push('(');
         builder.push_str(&self.operator);
-        match self.expression.as_ref().clone() {
+        match self.right.as_ref().clone() {
             Some(exp) => builder.push_str(&(**exp).to_string()),
             None => (),
         }
@@ -261,6 +261,54 @@ impl Node for PrefixExpression {
 }
 
 impl Expression for PrefixExpression {
+    fn expression_node(&self) {}
+}
+
+pub struct InfixExpression {
+    pub token:          token::Token,       // The operator token, e.g. +
+    pub left:           Option<Box<dyn Expression>>,
+    pub operator:       String,
+    pub right:          Option<Box<dyn Expression>>,
+}
+
+impl InfixExpression {
+    pub fn new(tok: token::Token, left_exp: Option<Box<dyn Expression>>, op: String, right_exp: Option<Box<dyn Expression>>) -> InfixExpression {
+        return InfixExpression{
+            token:          tok,
+            left:           left_exp,
+            operator:       op,
+            right:          right_exp,
+        };
+    }
+}
+
+impl Node for InfixExpression {
+    fn token_literal(&self) -> String {
+        return self.token.literal.clone();
+    }
+
+    fn to_string(&self) -> String {
+        let mut builder: String = String::new();
+
+        builder.push('(');
+        match self.left.as_ref().clone() {
+            Some(exp) => builder.push_str(&(**exp).to_string()),
+            None => (),
+        }
+        builder.push(' ');
+        builder.push_str(&self.operator);
+        builder.push(' ');
+        match self.right.as_ref().clone() {
+            Some(exp) => builder.push_str(&(**exp).to_string()),
+            None => (),
+        }
+        builder.push(')');
+
+        return builder;
+    }
+}
+
+impl Expression for InfixExpression {
     fn expression_node(&self) {}
 }
 
@@ -297,11 +345,18 @@ mod tests {
         );
         assert_eq!(il.to_string(), "5");
         let pe = PrefixExpression::new(
-            token::Token::new(token::INT, String::from("5")),
-            String::from("+"),
+            token::Token::new(token::MINUS, String::from("-")),
+            String::from("-"),
             Some(Box::new(IntegerLiteral::new(token::Token::new(token::INT, String::from("5")), 5)))
         );
-        assert_eq!(pe.to_string(), "(+5)");
+        assert_eq!(pe.to_string(), "(-5)");
+        let ie = InfixExpression::new(
+            token::Token::new(token::INT, String::from("5")),
+            Some(Box::new(IntegerLiteral::new(token::Token::new(token::INT, String::from("5")), 5))),
+            String::from("+"),
+            Some(Box::new(IntegerLiteral::new(token::Token::new(token::INT, String::from("10")), 10)))
+        );
+        assert_eq!(ie.to_string(), "(5 + 10)");
         let mut program = Program::new();
         program.statements.push(Box::new(ls));
         program.statements.push(Box::new(rs));

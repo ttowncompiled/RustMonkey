@@ -36,16 +36,56 @@ impl<'a> Parser<'a> {
         return p;
     }
 
+    pub fn precedences(&mut self, ttype: token::TokenType) -> i32 {
+        return match ttype {
+            "==" => Precedence::EQUALS as i32,
+            "!=" => Precedence::EQUALS as i32,
+            "<" => Precedence::LESSGREATER as i32,
+            ">" => Precedence::LESSGREATER as i32,
+            "+" => Precedence::SUM as i32,
+            "-" => Precedence::SUM as i32,
+            "/" => Precedence::PRODUCT as i32,
+            "*" => Precedence::PRODUCT as i32,
+            "(" => Precedence::CALL as i32,
+            _ => Precedence::LOWEST as i32,
+        };
+    }
+
+    pub fn cur_precedence(&mut self) -> i32 {
+        return match self.cur_token.as_ref().cloned() {
+            Some(tok) => self.precedences(tok.ttype),
+            None => Precedence::LOWEST as i32,
+        };
+    }
+
+    pub fn peek_precedence(&mut self) -> i32 {
+        return match self.peek_token.as_ref().cloned() {
+            Some(tok) => self.precedences(tok.ttype),
+            None => Precedence::LOWEST as i32,
+        };
+    }
+
     pub fn prefix_parse_fns(&mut self, ttype: token::TokenType) -> Option<Box<ast::Expression>> {
         return match ttype {
             "IDENT" => self.parse_identifier(),
             "INT" => self.parse_integer_literal(),
             "!" => self.parse_prefix_expression(),
             "-" => self.parse_prefix_expression(),
-            _ => {
-                self.no_prefix_parse_fn_error();
-                None
-            },
+            _ => None,
+        };
+    }
+
+    pub fn infix_parse_fns(&mut self, ttype: token::TokenType) -> bool {
+        return match ttype {
+            "+" =>  true,
+            "-" =>  true,
+            "/" =>  true,
+            "*" =>  true,
+            "==" => true,
+            "!=" => true,
+            "<" =>  true,
+            ">" =>  true,
+            _ =>    false,
         };
     }
 
@@ -67,20 +107,6 @@ impl<'a> Parser<'a> {
             },
             None => None,
         };
-    }
-
-    pub fn parse_prefix_expression(&mut self) -> Option<Box<ast::Expression>> {
-        let token: token::Token;
-        match self.cur_token.as_ref().cloned() {
-            Some(tok) => token = tok,
-            None => return None,
-        }
-
-        self.next_token();
-
-        let right: Option<Box<ast::Expression>> = self.parse_expression(Precedence::PREFIX as i32);
-
-        return Some(Box::new(ast::PrefixExpression::new(token.clone(), token.literal.clone(), right)));
     }
 
     pub fn peek_error(&mut self, ttype: token::TokenType) {
@@ -221,11 +247,64 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_expression(&mut self, precedence: i32) -> Option<Box<ast::Expression>> {
-        return match self.cur_token.as_ref().cloned() {
+        let prefix: Option<Box<ast::Expression>> = match self.cur_token.as_ref().cloned() {
             Some(tok) => self.prefix_parse_fns(tok.ttype),
             None => None,
         };
+
+        if prefix.is_none() {
+            self.no_prefix_parse_fn_error();
+            return None;
+        }
+
+        let mut leftExp: Option<Box<ast::Expression>> = prefix;
+
+        while ! self.peek_token_is(token::SEMICOLON) && precedence < self.peek_precedence() {
+            let flag: bool = match self.peek_token.as_ref().cloned() {
+                Some(tok) => self.infix_parse_fns(tok.ttype),
+                None => false,
+            };
+
+            if ! flag {
+                return leftExp;
+            }
+
+            self.next_token();
+
+            leftExp = self.parse_infix_expression(leftExp);
+        }
+
+        return leftExp;
     }
+
+    pub fn parse_prefix_expression(&mut self) -> Option<Box<ast::Expression>> {
+        let token: token::Token;
+        match self.cur_token.as_ref().cloned() {
+            Some(tok) => token = tok,
+            None => return None,
+        }
+
+        self.next_token();
+
+        let right: Option<Box<ast::Expression>> = self.parse_expression(Precedence::PREFIX as i32);
+
+        return Some(Box::new(ast::PrefixExpression::new(token.clone(), token.literal.clone(), right)));
+    }
+
+    pub fn parse_infix_expression(&mut self, left: Option<Box<ast::Expression>>) -> Option<Box<ast::Expression>> {
+        let token: token::Token;
+        match self.cur_token.as_ref().cloned() {
+            Some(tok) => token = tok,
+            None => return None,
+        }
+
+        let precedence: i32 = self.cur_precedence();
+        self.next_token();
+        let right: Option<Box<ast::Expression>> = self.parse_expression(precedence);
+
+        return Some(Box::new(ast::InfixExpression::new(token.clone(), left, token.literal.clone(), right)));
+    }
+
 
     pub fn expect_peek(&mut self, ttype: token::TokenType) -> bool {
         if self.peek_token_is(ttype) {
@@ -370,6 +449,41 @@ return 838383;
                 assert_eq!((*prog.statements[1]).to_string(), "(-5);", "tests[{}]", 1);
             },
             None => assert!(false, "parse_program() returns None"),
+        }
+    }
+
+    #[test]
+    fn test_parsing_infix_expressions() {
+        let infix_tests: [String; 8] = [
+            String::from("5 + 5;"),
+            String::from("5 - 5;"),
+            String::from("5 * 5;"),
+            String::from("5 / 5;"),
+            String::from("5 > 5;"),
+            String::from("5 < 5;"),
+            String::from("5 == 5;"),
+            String::from("5 != 5;")
+        ];
+
+        let mut i = 0;
+        for input in infix_tests.iter() {
+            let mut l = lexer::Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+
+            let program = p.parse_program();
+            check_parser_errors(&p);
+
+            match program {
+                Some(prog) => {
+                    if prog.statements.len() != 1 {
+                        assert!(false, "program.statements does not contain {} statements, got={}", 1, prog.statements.len());
+                    }
+                    assert_eq!((*prog.statements[0]).to_string(), format!("({});", &(*input)[..((*input).len()-1)]), "tests[{}]", i);
+                },
+                None => assert!(false, "parse_program() returns None"),
+            }
+
+            i += 1;
         }
     }
 
