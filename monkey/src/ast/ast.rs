@@ -13,7 +13,7 @@ pub trait Expression: Node {
 }
 
 pub struct Program {
-    pub statements: Vec<Box<Statement>>,
+    pub statements: Vec<Box<dyn Statement>>,
 }
 
 impl Program {
@@ -38,11 +38,11 @@ impl Node for Program {
 pub struct LetStatement {
     pub token:      token::Token,       // the token.LET token
     pub name:       Identifier,
-    pub value:      Box<Expression>,
+    pub value:      Box<dyn Expression>,
 }
 
 impl LetStatement {
-    pub fn new(tok: token::Token, name: Identifier, value: Box<Expression>) -> LetStatement {
+    pub fn new(tok: token::Token, name: Identifier, value: Box<dyn Expression>) -> LetStatement {
         return LetStatement{
             token:      tok,        // the token.LET token
             name:       name,
